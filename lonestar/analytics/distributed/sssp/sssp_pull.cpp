@@ -65,7 +65,7 @@ static cll::opt<Exec> execution(
 const uint32_t infinity = std::numeric_limits<uint32_t>::max() / 4;
 
 struct NodeData {
-  uint32_t dist_current;
+  double dist_current;
 };
 
 galois::DynamicBitSet bitset_dist_current;
@@ -183,8 +183,8 @@ struct SSSP {
     for (auto jj : graph->edges(src)) {
       GNode dst         = graph->getEdgeDst(jj);
       auto& dnode       = graph->getData(dst);
-      uint32_t new_dist = dnode.dist_current + graph->getEdgeData(jj);
-      uint32_t old_dist = galois::min(snode.dist_current, new_dist);
+      double new_dist = dnode.dist_current + graph->getEdgeData(jj);
+      double old_dist = galois::min(snode.dist_current, new_dist);
       if (old_dist > new_dist) {
         bitset_dist_current.set(src);
         active_vertices += 1;
@@ -328,9 +328,9 @@ int main(int argc, char** argv) {
     galois::runtime::reportParam(REGION_NAME, "Source Node ID", src_node);
   }
 
-  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
+  //galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
 
-  StatTimer_total.start();
+  //StatTimer_total.start();
 
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU
@@ -340,6 +340,10 @@ int main(int argc, char** argv) {
   std::tie(hg, syncSubstrate) =
       distGraphInitialization<NodeData, unsigned int, false>();
 #endif
+
+  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
+
+  StatTimer_total.start();
 
   bitset_dist_current.resize(hg->size());
 

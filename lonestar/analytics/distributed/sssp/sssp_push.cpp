@@ -68,16 +68,16 @@ static cll::opt<Exec> execution(
 /* Graph structure declarations + other initialization */
 /******************************************************************************/
 
-const uint32_t infinity = std::numeric_limits<uint32_t>::max() / 4;
+const double infinity = std::numeric_limits<double>::max() / 4;
 
 struct NodeData {
-  std::atomic<uint32_t> dist_current;
-  uint32_t dist_old;
+  std::atomic<double> dist_current;
+  double dist_old;
 };
 
 galois::DynamicBitSet bitset_dist_current;
 
-typedef galois::graphs::DistGraph<NodeData, unsigned int> Graph;
+typedef galois::graphs::DistGraph<NodeData, double> Graph;
 typedef typename Graph::GraphNode GNode;
 
 std::unique_ptr<galois::graphs::GluonSubstrate<Graph>> syncSubstrate;
@@ -89,11 +89,11 @@ std::unique_ptr<galois::graphs::GluonSubstrate<Graph>> syncSubstrate;
 /******************************************************************************/
 
 struct InitializeGraph {
-  const uint32_t& local_infinity;
+  const double& local_infinity;
   cll::opt<uint64_t>& local_src_node;
   Graph* graph;
 
-  InitializeGraph(cll::opt<uint64_t>& _src_node, const uint32_t& _infinity,
+  InitializeGraph(cll::opt<uint64_t>& _src_node, const double& _infinity,
                   Graph* _graph)
       : local_infinity(_infinity), local_src_node(_src_node), graph(_graph) {}
 
@@ -177,8 +177,8 @@ struct FirstItr_SSSP {
     for (auto jj : graph->edges(src)) {
       GNode dst         = graph->getEdgeDst(jj);
       auto& dnode       = graph->getData(dst);
-      uint32_t new_dist = graph->getEdgeData(jj) + snode.dist_current;
-      uint32_t old_dist = galois::atomicMin(dnode.dist_current, new_dist);
+      double new_dist = graph->getEdgeData(jj) + snode.dist_current;
+      double old_dist = galois::atomicMin(dnode.dist_current, new_dist);
       if (old_dist > new_dist)
         bitset_dist_current.set(dst);
     }
@@ -276,8 +276,8 @@ struct SSSP {
 
           GNode dst         = graph->getEdgeDst(jj);
           auto& dnode       = graph->getData(dst);
-          uint32_t new_dist = graph->getEdgeData(jj) + snode.dist_current;
-          uint32_t old_dist = galois::atomicMin(dnode.dist_current, new_dist);
+          double new_dist = graph->getEdgeData(jj) + snode.dist_current;
+          double old_dist = galois::atomicMin(dnode.dist_current, new_dist);
           if (old_dist > new_dist)
             bitset_dist_current.set(dst);
         }
@@ -292,22 +292,22 @@ struct SSSP {
 
 /* Prints total number of nodes visited + max distance */
 struct SSSPSanityCheck {
-  const uint32_t& local_infinity;
+  const double& local_infinity;
   Graph* graph;
 
   galois::DGAccumulator<uint64_t>& DGAccumulator_sum;
-  galois::DGReduceMax<uint32_t>& DGMax;
+  galois::DGReduceMax<double>& DGMax;
   galois::DGAccumulator<uint64_t>& dg_avg;
 
-  SSSPSanityCheck(const uint32_t& _infinity, Graph* _graph,
+  SSSPSanityCheck(const double& _infinity, Graph* _graph,
                   galois::DGAccumulator<uint64_t>& dgas,
-                  galois::DGReduceMax<uint32_t>& dgm,
+                  galois::DGReduceMax<double>& dgm,
                   galois::DGAccumulator<uint64_t>& _dg_avg)
       : local_infinity(_infinity), graph(_graph), DGAccumulator_sum(dgas),
         DGMax(dgm), dg_avg(_dg_avg) {}
 
   void static go(Graph& _graph, galois::DGAccumulator<uint64_t>& dgas,
-                 galois::DGReduceMax<uint32_t>& dgm,
+                 galois::DGReduceMax<double>& dgm,
                  galois::DGAccumulator<uint64_t>& dgag) {
     dgas.reset();
     dgm.reset();
@@ -333,7 +333,7 @@ struct SSSPSanityCheck {
     }
 
     uint64_t num_visited  = dgas.reduce();
-    uint32_t max_distance = dgm.reduce();
+    double max_distance = dgm.reduce();
 
     float visit_average = ((float)dgag.reduce()) / num_visited;
 
@@ -363,8 +363,8 @@ struct SSSPSanityCheck {
 /* Make results */
 /******************************************************************************/
 
-std::vector<uint32_t> makeResultsCPU(std::unique_ptr<Graph>& hg) {
-  std::vector<uint32_t> values;
+std::vector<double> makeResultsCPU(std::unique_ptr<Graph>& hg) {
+  std::vector<double> values;
 
   values.reserve(hg->numMasters());
   for (auto node : hg->masterNodesRange()) {
@@ -375,8 +375,8 @@ std::vector<uint32_t> makeResultsCPU(std::unique_ptr<Graph>& hg) {
 }
 
 #ifdef GALOIS_ENABLE_GPU
-std::vector<uint32_t> makeResultsGPU(std::unique_ptr<Graph>& hg) {
-  std::vector<uint32_t> values;
+std::vector<double> makeResultsGPU(std::unique_ptr<Graph>& hg) {
+  std::vector<double> values;
 
   values.reserve(hg->numMasters());
   for (auto node : hg->masterNodesRange()) {
@@ -386,12 +386,12 @@ std::vector<uint32_t> makeResultsGPU(std::unique_ptr<Graph>& hg) {
   return values;
 }
 #else
-std::vector<uint32_t> makeResultsGPU(std::unique_ptr<Graph>& /*unused*/) {
+std::vector<double> makeResultsGPU(std::unique_ptr<Graph>& /*unused*/) {
   abort();
 }
 #endif
 
-std::vector<uint32_t> makeResults(std::unique_ptr<Graph>& hg) {
+std::vector<double> makeResults(std::unique_ptr<Graph>& hg) {
   switch (personality) {
   case CPU:
     return makeResultsCPU(hg);
@@ -423,18 +423,22 @@ int main(int argc, char** argv) {
     galois::runtime::reportParam("SSSP", "Source Node ID", src_node);
   }
 
-  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
+ // galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
 
-  StatTimer_total.start();
+ // StatTimer_total.start();
 
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU
   std::tie(hg, syncSubstrate) =
-      distGraphInitialization<NodeData, unsigned int>(&cuda_ctx);
+      distGraphInitialization<NodeData, double>(&cuda_ctx);
 #else
   std::tie(hg, syncSubstrate) =
-      distGraphInitialization<NodeData, unsigned int>();
+      distGraphInitialization<NodeData, double>();
 #endif
+
+  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
+
+  StatTimer_total.start();
 
   bitset_dist_current.resize(hg->size());
 
@@ -446,7 +450,7 @@ int main(int argc, char** argv) {
   // accumulators for use in operators
   galois::DGAccumulator<uint64_t> DGAccumulator_sum;
   galois::DGAccumulator<uint64_t> dg_avge;
-  galois::DGReduceMax<uint32_t> m;
+  galois::DGReduceMax<double> m;
 
   for (auto run = 0; run < numRuns; ++run) {
     galois::gPrint("[", net.ID, "] SSSP::go run ", run, " called\n");
@@ -483,7 +487,7 @@ int main(int argc, char** argv) {
   StatTimer_total.stop();
 
   if (output) {
-    std::vector<uint32_t> results = makeResults(hg);
+    std::vector<double> results = makeResults(hg);
     auto globalIDs                = hg->getMasterGlobalIDs();
     assert(results.size() == globalIDs.size());
 

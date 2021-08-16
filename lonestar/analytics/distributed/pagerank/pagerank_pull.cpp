@@ -493,10 +493,11 @@ int main(int argc, char** argv) {
     ss << tolerance;
     galois::runtime::reportParam(REGION_NAME, "Tolerance", ss.str());
   }
-
+  /*
   galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
 
   StatTimer_total.start();
+  */
 
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU
@@ -509,6 +510,9 @@ int main(int argc, char** argv) {
 
   bitset_residual.resize(hg->size());
   bitset_nout.resize(hg->size());
+  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
+
+  StatTimer_total.start();
 
   galois::gPrint("[", net.ID, "] InitializeGraph::go called\n");
 

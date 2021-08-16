@@ -300,10 +300,6 @@ int main(int argc, char** argv) {
     galois::runtime::reportParam(REGION_NAME, "Max Iterations", maxIterations);
   }
 
-  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
-
-  StatTimer_total.start();
-
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU
   std::tie(hg, syncSubstrate) =
@@ -312,7 +308,9 @@ int main(int argc, char** argv) {
   std::tie(hg, syncSubstrate) =
       symmetricDistGraphInitialization<NodeData, void>();
 #endif
+  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
 
+  StatTimer_total.start();
   bitset_comp_current.resize(hg->size());
 
   galois::gPrint("[", net.ID, "] InitializeGraph::go called\n");
