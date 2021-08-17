@@ -187,7 +187,7 @@ struct FirstItr_SSSP {
 
 template <bool async>
 struct SSSP {
-  uint32_t local_priority;
+  double local_priority;
   Graph* graph;
   using DGTerminatorDetector =
       typename std::conditional<async, galois::DGTerminator<unsigned int>,
@@ -197,7 +197,7 @@ struct SSSP {
   DGTerminatorDetector& active_vertices;
   DGAccumulatorTy& work_edges;
 
-  SSSP(uint32_t _local_priority, Graph* _graph, DGTerminatorDetector& _dga,
+  SSSP(double _local_priority, Graph* _graph, DGTerminatorDetector& _dga,
        DGAccumulatorTy& _work_edges)
       : local_priority(_local_priority), graph(_graph), active_vertices(_dga),
         work_edges(_work_edges) {}
@@ -209,9 +209,9 @@ struct SSSP {
 
     const auto& nodesWithEdges = _graph.allNodesWithEdgesRange();
 
-    uint32_t priority;
+    double priority;
     if (delta == 0)
-      priority = std::numeric_limits<uint32_t>::max();
+      priority = std::numeric_limits<double>::max();
     else
       priority = 0;
     DGTerminatorDetector dga;
@@ -297,18 +297,18 @@ struct SSSPSanityCheck {
 
   galois::DGAccumulator<uint64_t>& DGAccumulator_sum;
   galois::DGReduceMax<double>& DGMax;
-  galois::DGAccumulator<uint64_t>& dg_avg;
+  galois::DGAccumulator<double>& dg_avg;
 
   SSSPSanityCheck(const double& _infinity, Graph* _graph,
                   galois::DGAccumulator<uint64_t>& dgas,
                   galois::DGReduceMax<double>& dgm,
-                  galois::DGAccumulator<uint64_t>& _dg_avg)
+                  galois::DGAccumulator<double>& _dg_avg)
       : local_infinity(_infinity), graph(_graph), DGAccumulator_sum(dgas),
         DGMax(dgm), dg_avg(_dg_avg) {}
 
   void static go(Graph& _graph, galois::DGAccumulator<uint64_t>& dgas,
                  galois::DGReduceMax<double>& dgm,
-                 galois::DGAccumulator<uint64_t>& dgag) {
+                 galois::DGAccumulator<double>& dgag) {
     dgas.reset();
     dgm.reset();
     dgag.reset();
@@ -316,8 +316,8 @@ struct SSSPSanityCheck {
     if (personality == GPU_CUDA) {
 #ifdef GALOIS_ENABLE_GPU
       uint64_t sum;
-      uint64_t avg;
-      uint32_t max;
+      double avg;
+      double max;
       SSSPSanityCheck_masterNodes_cuda(sum, avg, max, infinity, cuda_ctx);
       dgas += sum;
       dgm.update(max);
@@ -423,9 +423,9 @@ int main(int argc, char** argv) {
     galois::runtime::reportParam("SSSP", "Source Node ID", src_node);
   }
 
- // galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
+  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
 
- // StatTimer_total.start();
+  StatTimer_total.start();
 
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU
@@ -436,10 +436,6 @@ int main(int argc, char** argv) {
       distGraphInitialization<NodeData, unsigned int>();
 #endif
 
-  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
-
-  StatTimer_total.start();
-
   bitset_dist_current.resize(hg->size());
 
   galois::gPrint("[", net.ID, "] InitializeGraph::go called\n");
@@ -449,7 +445,7 @@ int main(int argc, char** argv) {
 
   // accumulators for use in operators
   galois::DGAccumulator<uint64_t> DGAccumulator_sum;
-  galois::DGAccumulator<uint64_t> dg_avge;
+  galois::DGAccumulator<double> dg_avge;
   galois::DGReduceMax<double> m;
 
   for (auto run = 0; run < numRuns; ++run) {

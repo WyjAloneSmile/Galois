@@ -145,6 +145,10 @@ int main(int argc, char** argv) {
   }
 
   const auto& net = galois::runtime::getSystemNetworkInterface();
+
+  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
+
+  StatTimer_total.start();
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU
   std::tie(hg, syncSubstrate) =
@@ -169,9 +173,6 @@ int main(int argc, char** argv) {
     hg->sortEdgesByDestination();
     edgeSortTime.stop();
   }
-  galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
-
-  StatTimer_total.start();
   ///! accumulators for use in operators
   galois::DGAccumulator<uint64_t> DGAccumulator_numTriangles;
 
