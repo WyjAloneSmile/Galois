@@ -361,7 +361,7 @@ int main(int argc, char** argv) {
 
   galois::StatTimer StatTimer_total("TimerTotal", REGION_NAME);
 
-  StatTimer_total.start(); 
+  StatTimer_total.start();
 
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU

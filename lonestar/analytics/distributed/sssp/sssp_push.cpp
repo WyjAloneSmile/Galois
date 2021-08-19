@@ -77,7 +77,7 @@ struct NodeData {
 
 galois::DynamicBitSet bitset_dist_current;
 
-typedef galois::graphs::DistGraph<NodeData, unsigned int> Graph;
+typedef galois::graphs::DistGraph<NodeData, double> Graph;
 typedef typename Graph::GraphNode GNode;
 
 std::unique_ptr<galois::graphs::GluonSubstrate<Graph>> syncSubstrate;
@@ -430,10 +430,10 @@ int main(int argc, char** argv) {
   std::unique_ptr<Graph> hg;
 #ifdef GALOIS_ENABLE_GPU
   std::tie(hg, syncSubstrate) =
-      distGraphInitialization<NodeData, unsigned int>(&cuda_ctx);
+      distGraphInitialization<NodeData, double>(&cuda_ctx);
 #else
   std::tie(hg, syncSubstrate) =
-      distGraphInitialization<NodeData, unsigned int>();
+      distGraphInitialization<NodeData, double>();
 #endif
 
   bitset_dist_current.resize(hg->size());
